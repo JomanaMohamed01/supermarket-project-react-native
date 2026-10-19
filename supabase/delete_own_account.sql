@@ -30,7 +30,10 @@ begin
   delete from public.cart_items where user_id = uid;
   delete from public.profiles where id = uid;
 
-  -- Remove auth user (requires security definer)
+  -- Hard-remove auth user + identities (requires security definer)
+  delete from auth.identities where user_id = uid;
+  delete from auth.sessions where user_id = uid;
+  delete from auth.refresh_tokens where user_id = uid;
   delete from auth.users where id = uid;
 end;
 $$;
