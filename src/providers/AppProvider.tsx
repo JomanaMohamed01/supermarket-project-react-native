@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { MOCK_CATEGORIES, MOCK_PRODUCTS } from "@/data/catalog";
+import { getErrorMessage } from "@/lib/errors";
 import { getSupabase, hasSupabaseEnv } from "@/lib/supabase";
 import type { Category, Product, Profile } from "@/lib/types";
 
@@ -61,43 +62,90 @@ function makeId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function mapCartRows(
+  data: Array<{ id: string; quantity: number; product: Product | Product[] | null }> | null,
+): CartRow[] {
+  return (
+    data
+      ?.map((row) => {
+        const product = Array.isArray(row.product) ? row.product[0] : row.product;
+        if (!product) return null;
+        return {
+          id: row.id,
+          quantity: row.quantity,
+          product,
+        };
+      })
+      .filter((row): row is CartRow => Boolean(row)) ?? []
+  );
+}
+
+async function fetchCatalogFromSupabase() {
+  const supabase = getSupabase();
+  if (!supabase) {
+    return { categories: MOCK_CATEGORIES, products: MOCK_PRODUCTS };
+  }
+
+  const [{ data: categoryRows, error: categoryError }, { data: productRows, error: productError }] =
+    await Promise.all([
+      supabase.from("categories").select("*").order("sort_order", { ascending: true }),
+      supabase.from("products").select("*").order("name", { ascending: true }),
+    ]);
+
+  if (categoryError) throw categoryError;
+  if (productError) throw productError;
+
+  return {
+    categories: (categoryRows ?? []) as Category[],
+    products: (productRows ?? []) as Product[],
+  };
+}
+
+async function fetchCartFromSupabase(userId: string) {
+  const supabase = getSupabase();
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from("cart_items")
+    .select("id, quantity, product:products(*)")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  return mapCartRows(
+    data as Array<{ id: string; quantity: number; product: Product | Product[] | null }> | null,
+  );
+}
+
+async function loadProfile(userId: string, email: string, fullNameFallback?: string | null) {
+  const supabase = getSupabase();
+  if (!supabase) return null;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name, phone, address, avatar_url")
+    .eq("id", userId)
+    .maybeSingle();
+
+  return {
+    id: userId,
+    email,
+    full_name: profile?.full_name ?? fullNameFallback ?? null,
+    phone: profile?.phone ?? null,
+    address: profile?.address ?? null,
+    avatar_url: profile?.avatar_url ?? null,
+  } satisfies Profile;
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [user, setUser] = useState<Profile | null>(null);
   const [cartItems, setCartItems] = useState<CartRow[]>([]);
   const [welcomeName, setWelcomeName] = useState<string | null>(null);
-  const [categories] = useState<Category[]>(MOCK_CATEGORIES);
-  const [products] = useState<Product[]>(MOCK_PRODUCTS);
+  const [categories, setCategories] = useState<Category[]>(MOCK_CATEGORIES);
+  const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS);
 
   const usingMockData = !hasSupabaseEnv();
-
-  useEffect(() => {
-    async function hydrate() {
-      try {
-        const supabase = getSupabase();
-        if (supabase) {
-          // Supabase is connected — session hydration will be wired next.
-          // For now fall through to local storage so UI still works.
-        }
-
-        const [rawUser, rawCart] = await Promise.all([
-          AsyncStorage.getItem(STORAGE_USER),
-          AsyncStorage.getItem(STORAGE_CART),
-        ]);
-
-        if (rawUser) {
-          setUser(JSON.parse(rawUser) as Profile);
-        }
-        if (rawCart) {
-          setCartItems(JSON.parse(rawCart) as CartRow[]);
-        }
-      } finally {
-        setReady(true);
-      }
-    }
-
-    void hydrate();
-  }, []);
 
   const persistUser = useCallback(async (next: Profile | null) => {
     setUser(next);
@@ -110,8 +158,80 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const persistCart = useCallback(async (next: CartRow[]) => {
     setCartItems(next);
-    await AsyncStorage.setItem(STORAGE_CART, JSON.stringify(next));
+    if (!hasSupabaseEnv()) {
+      await AsyncStorage.setItem(STORAGE_CART, JSON.stringify(next));
+    }
   }, []);
+
+  const refreshCart = useCallback(
+    async (userId: string) => {
+      const rows = await fetchCartFromSupabase(userId);
+      setCartItems(rows);
+      return rows;
+    },
+    [],
+  );
+
+  useEffect(() => {
+    async function hydrate() {
+      try {
+        const supabase = getSupabase();
+
+        if (supabase) {
+          const catalog = await fetchCatalogFromSupabase();
+          setCategories(catalog.categories);
+          setProducts(catalog.products);
+
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+
+          if (session?.user) {
+            const profile = await loadProfile(
+              session.user.id,
+              session.user.email ?? "",
+              typeof session.user.user_metadata?.full_name === "string"
+                ? session.user.user_metadata.full_name
+                : null,
+            );
+            if (profile) {
+              await persistUser(profile);
+              await refreshCart(profile.id);
+            }
+          } else {
+            await persistUser(null);
+            setCartItems([]);
+            await AsyncStorage.multiRemove([STORAGE_USER, STORAGE_CART]);
+          }
+          return;
+        }
+
+        // Offline / mock mode
+        setCategories(MOCK_CATEGORIES);
+        setProducts(MOCK_PRODUCTS);
+        const [rawUser, rawCart] = await Promise.all([
+          AsyncStorage.getItem(STORAGE_USER),
+          AsyncStorage.getItem(STORAGE_CART),
+        ]);
+        if (rawUser) setUser(JSON.parse(rawUser) as Profile);
+        if (rawCart) setCartItems(JSON.parse(rawCart) as CartRow[]);
+      } catch (err) {
+        console.warn("Failed to hydrate app state:", getErrorMessage(err));
+        if (!hasSupabaseEnv()) {
+          setCategories(MOCK_CATEGORIES);
+          setProducts(MOCK_PRODUCTS);
+        } else {
+          // Do not mix mock product IDs with a live Supabase cart.
+          setCategories([]);
+          setProducts([]);
+        }
+      } finally {
+        setReady(true);
+      }
+    }
+
+    void hydrate();
+  }, [persistUser, refreshCart]);
 
   const signIn = useCallback(
     async (email: string, password: string) => {
@@ -124,43 +244,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (error) throw error;
 
         const authUser = data.user;
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("full_name, phone, address, avatar_url")
-          .eq("id", authUser.id)
-          .maybeSingle();
+        const profile = await loadProfile(
+          authUser.id,
+          authUser.email ?? email,
+          typeof authUser.user_metadata?.full_name === "string"
+            ? authUser.user_metadata.full_name
+            : null,
+        );
+        if (!profile) throw new Error("Could not load profile");
 
-        const next: Profile = {
-          id: authUser.id,
-          email: authUser.email ?? email,
-          full_name:
-            profile?.full_name ??
-            (typeof authUser.user_metadata?.full_name === "string"
-              ? authUser.user_metadata.full_name
-              : null),
-          phone: profile?.phone ?? null,
-          address: profile?.address ?? null,
-          avatar_url: profile?.avatar_url ?? null,
-        };
-
-        await persistUser(next);
+        await persistUser(profile);
+        await refreshCart(profile.id);
         setWelcomeName(
-          (next.full_name?.trim() || next.email.split("@")[0] || "").split(
+          (profile.full_name?.trim() || profile.email.split("@")[0] || "").split(
             /\s+/,
           )[0] || null,
         );
         return;
       }
 
-      // Local mock auth (until Supabase is connected)
       const rawUsers = await AsyncStorage.getItem(STORAGE_USERS);
-      const users = rawUsers ? (JSON.parse(rawUsers) as Array<Profile & { password: string }>) : [];
+      const users = rawUsers
+        ? (JSON.parse(rawUsers) as Array<Profile & { password: string }>)
+        : [];
       const found = users.find(
-        (u) => u.email.toLowerCase() === email.trim().toLowerCase() && u.password === password,
+        (u) =>
+          u.email.toLowerCase() === email.trim().toLowerCase() &&
+          u.password === password,
       );
-      if (!found) {
-        throw new Error("Invalid login credentials");
-      }
+      if (!found) throw new Error("Invalid login credentials");
 
       const { password: _pw, ...profile } = found;
       await persistUser(profile);
@@ -170,7 +282,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         )[0] || null,
       );
     },
-    [persistUser],
+    [persistUser, refreshCart],
   );
 
   const signUp = useCallback(
@@ -187,18 +299,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
         let avatarUrl: string | null = input.avatarUri ?? null;
 
-        if (input.avatarUri && data.session) {
-          // Avatar upload to Supabase storage can be wired when connecting.
-          avatarUrl = input.avatarUri;
-        }
-
-        await supabase.from("profiles").upsert({
+        const { error: profileError } = await supabase.from("profiles").upsert({
           id: data.user.id,
           full_name: input.fullName.trim(),
           phone: input.phone.trim(),
           address: input.address.trim(),
           ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
         });
+        if (profileError) throw profileError;
 
         await persistUser({
           id: data.user.id,
@@ -208,6 +316,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           address: input.address.trim(),
           avatar_url: avatarUrl,
         });
+        setCartItems([]);
         return;
       }
 
@@ -216,7 +325,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ? (JSON.parse(rawUsers) as Array<Profile & { password: string }>)
         : [];
 
-      if (users.some((u) => u.email.toLowerCase() === input.email.trim().toLowerCase())) {
+      if (
+        users.some(
+          (u) => u.email.toLowerCase() === input.email.trim().toLowerCase(),
+        )
+      ) {
         throw new Error("An account with this email already exists");
       }
 
@@ -245,8 +358,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       await supabase.auth.signOut();
     }
     await persistUser(null);
-    await persistCart([]);
-  }, [persistCart, persistUser]);
+    setCartItems([]);
+    await AsyncStorage.removeItem(STORAGE_CART);
+  }, [persistUser]);
 
   const addToCart = useCallback(
     async (productId: string) => {
@@ -279,6 +393,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           });
           if (error) throw error;
         }
+
+        await refreshCart(user.id);
+        return;
       }
 
       const existingLocal = cartItems.find((item) => item.product.id === productId);
@@ -297,23 +414,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ]);
       }
     },
-    [cartItems, persistCart, products, user],
+    [cartItems, persistCart, products, refreshCart, user],
   );
 
   const updateCartQuantity = useCallback(
     async (cartItemId: string, quantity: number) => {
+      const supabase = getSupabase();
+
       if (quantity < 1) {
+        if (supabase) {
+          const { error } = await supabase
+            .from("cart_items")
+            .delete()
+            .eq("id", cartItemId);
+          if (error) throw error;
+          if (user) await refreshCart(user.id);
+          else setCartItems((prev) => prev.filter((item) => item.id !== cartItemId));
+          return;
+        }
         await persistCart(cartItems.filter((item) => item.id !== cartItemId));
         return;
       }
 
-      const supabase = getSupabase();
       if (supabase) {
         const { error } = await supabase
           .from("cart_items")
           .update({ quantity })
           .eq("id", cartItemId);
         if (error) throw error;
+        if (user) await refreshCart(user.id);
+        return;
       }
 
       await persistCart(
@@ -322,7 +452,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ),
       );
     },
-    [cartItems, persistCart],
+    [cartItems, persistCart, refreshCart, user],
   );
 
   const removeFromCart = useCallback(
@@ -334,11 +464,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
           .delete()
           .eq("id", cartItemId);
         if (error) throw error;
+        if (user) await refreshCart(user.id);
+        return;
       }
 
       await persistCart(cartItems.filter((item) => item.id !== cartItemId));
     },
-    [cartItems, persistCart],
+    [cartItems, persistCart, refreshCart, user],
   );
 
   const placeOrder = useCallback(async () => {
@@ -386,7 +518,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         .eq("user_id", user.id);
       if (clearError) throw clearError;
 
-      await persistCart([]);
+      setCartItems([]);
       return { orderId: order.id as string, total };
     }
 
@@ -419,22 +551,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       const supabase = getSupabase();
       if (supabase) {
-        // Upload to avatars bucket when connecting Supabase storage.
         const { error } = await supabase
           .from("profiles")
           .update({ avatar_url: uri })
           .eq("id", user.id);
         if (error) throw error;
-      }
-
-      // Also update local users registry for mock mode
-      const rawUsers = await AsyncStorage.getItem(STORAGE_USERS);
-      if (rawUsers) {
-        const users = JSON.parse(rawUsers) as Array<Profile & { password: string }>;
-        const nextUsers = users.map((u) =>
-          u.id === user.id ? { ...u, avatar_url: uri } : u,
-        );
-        await AsyncStorage.setItem(STORAGE_USERS, JSON.stringify(nextUsers));
+      } else {
+        const rawUsers = await AsyncStorage.getItem(STORAGE_USERS);
+        if (rawUsers) {
+          const users = JSON.parse(rawUsers) as Array<
+            Profile & { password: string }
+          >;
+          await AsyncStorage.setItem(
+            STORAGE_USERS,
+            JSON.stringify(
+              users.map((u) =>
+                u.id === user.id ? { ...u, avatar_url: uri } : u,
+              ),
+            ),
+          );
+        }
       }
 
       await persistUser({ ...user, avatar_url: uri });
@@ -447,22 +583,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     const supabase = getSupabase();
     if (supabase) {
-      // Account deletion API can be wired when connecting Supabase.
       await supabase.auth.signOut();
-    }
-
-    const rawUsers = await AsyncStorage.getItem(STORAGE_USERS);
-    if (rawUsers) {
-      const users = JSON.parse(rawUsers) as Array<Profile & { password: string }>;
-      await AsyncStorage.setItem(
-        STORAGE_USERS,
-        JSON.stringify(users.filter((u) => u.id !== user.id)),
-      );
+    } else {
+      const rawUsers = await AsyncStorage.getItem(STORAGE_USERS);
+      if (rawUsers) {
+        const users = JSON.parse(rawUsers) as Array<
+          Profile & { password: string }
+        >;
+        await AsyncStorage.setItem(
+          STORAGE_USERS,
+          JSON.stringify(users.filter((u) => u.id !== user.id)),
+        );
+      }
     }
 
     await persistUser(null);
-    await persistCart([]);
-  }, [persistCart, persistUser, user]);
+    setCartItems([]);
+    await AsyncStorage.removeItem(STORAGE_CART);
+  }, [persistUser, user]);
 
   const cartCount = useMemo(
     () => cartItems.reduce((sum, item) => sum + item.quantity, 0),

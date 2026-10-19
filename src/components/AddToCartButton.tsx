@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Pressable, StyleSheet, Text } from "react-native";
 import { Toast } from "@/components/Toast";
 import { colors } from "@/constants/theme";
+import { getErrorMessage } from "@/lib/errors";
 import { useApp } from "@/providers/AppProvider";
 
 type AddToCartButtonProps = {
@@ -23,7 +24,7 @@ export function AddToCartButton({ productId }: AddToCartButtonProps) {
       setToast({ text: "Added to cart", tone: "success" });
     } catch (err) {
       setToast({
-        text: err instanceof Error ? err.message : "Could not add item",
+        text: getErrorMessage(err, "Could not add item"),
         tone: "error",
       });
     } finally {
