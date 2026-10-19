@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Modal, StyleSheet, Text, View } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -53,31 +53,36 @@ export function Toast({
     opacity: opacity.value,
   }));
 
-  if (!visible) return null;
-
   return (
-    <View pointerEvents="none" style={[styles.wrap, { paddingTop: insets.top + 12 }]}>
-      <Animated.View
-        style={[
-          styles.toast,
-          tone === "error" ? styles.error : styles.success,
-          shadow,
-          animatedStyle,
-        ]}
+    <Modal
+      visible={visible}
+      transparent
+      animationType="none"
+      statusBarTranslucent
+      onRequestClose={onHide}
+    >
+      <View
+        pointerEvents="box-none"
+        style={[styles.wrap, { paddingTop: insets.top + 12 }]}
       >
-        <Text style={styles.text}>{message}</Text>
-      </Animated.View>
-    </View>
+        <Animated.View
+          style={[
+            styles.toast,
+            tone === "error" ? styles.error : styles.success,
+            shadow,
+            animatedStyle,
+          ]}
+        >
+          <Text style={styles.text}>{message}</Text>
+        </Animated.View>
+      </View>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    zIndex: 200,
+    flex: 1,
     alignItems: "center",
     paddingHorizontal: 16,
   },
