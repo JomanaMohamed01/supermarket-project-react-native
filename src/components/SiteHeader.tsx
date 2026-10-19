@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Image,
   Modal,
@@ -12,11 +12,23 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, shadow } from "@/constants/theme";
 import { useApp } from "@/providers/AppProvider";
 
+function isUsableAvatarUrl(url: string | null | undefined) {
+  if (!url?.trim()) return false;
+  // blob: / temporary file URIs do not survive refresh
+  if (url.startsWith("blob:") || url.startsWith("file:")) return false;
+  return true;
+}
+
 export function SiteHeader() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, cartCount, signOut } = useApp();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [avatarBroken, setAvatarBroken] = useState(false);
+
+  useEffect(() => {
+    setAvatarBroken(false);
+  }, [user?.avatar_url]);
 
   if (!user) return null;
 
@@ -51,8 +63,12 @@ export function SiteHeader() {
         style={styles.avatarButton}
         accessibilityLabel="Account menu"
       >
-        {user.avatar_url ? (
-          <Image source={{ uri: user.avatar_url }} style={styles.avatar} />
+        {isUsableAvatarUrl(user.avatar_url) && !avatarBroken ? (
+          <Image
+            source={{ uri: user.avatar_url! }}
+            style={styles.avatar}
+            onError={() => setAvatarBroken(true)}
+          />
         ) : (
           <View style={[styles.avatar, styles.avatarFallback]}>
             <Text style={styles.initials}>{initials}</Text>

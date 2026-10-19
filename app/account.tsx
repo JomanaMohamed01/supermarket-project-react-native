@@ -16,6 +16,12 @@ import { Toast } from "@/components/Toast";
 import { colors, shadow } from "@/constants/theme";
 import { useApp } from "@/providers/AppProvider";
 
+function isUsableAvatarUrl(url: string | null | undefined) {
+  if (!url?.trim()) return false;
+  if (url.startsWith("blob:") || url.startsWith("file:")) return false;
+  return true;
+}
+
 export default function AccountScreen() {
   const router = useRouter();
   const {
@@ -28,10 +34,6 @@ export default function AccountScreen() {
 
   const [address, setAddress] = useState(user?.address ?? "");
   const [savingAddress, setSavingAddress] = useState(false);
-
-  useEffect(() => {
-    setAddress(user?.address ?? "");
-  }, [user?.address]);
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -39,6 +41,15 @@ export default function AccountScreen() {
   const [error, setError] = useState<string | null>(null);
   const [addressError, setAddressError] = useState<string | null>(null);
   const [addressToast, setAddressToast] = useState(false);
+  const [avatarBroken, setAvatarBroken] = useState(false);
+
+  useEffect(() => {
+    setAddress(user?.address ?? "");
+  }, [user?.address]);
+
+  useEffect(() => {
+    setAvatarBroken(false);
+  }, [user?.avatar_url]);
 
   if (ready && !user) return <Redirect href="/login" />;
   if (!user) return null;
@@ -125,8 +136,12 @@ export default function AccountScreen() {
         <View style={[styles.card, shadow]}>
           <View style={styles.profileRow}>
             <View style={styles.avatar}>
-              {user.avatar_url ? (
-                <Image source={{ uri: user.avatar_url }} style={styles.avatarImg} />
+              {isUsableAvatarUrl(user.avatar_url) && !avatarBroken ? (
+                <Image
+                  source={{ uri: user.avatar_url! }}
+                  style={styles.avatarImg}
+                  onError={() => setAvatarBroken(true)}
+                />
               ) : (
                 <Text style={styles.initials}>{initials}</Text>
               )}

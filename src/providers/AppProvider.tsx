@@ -12,6 +12,7 @@ import { MOCK_CATEGORIES, MOCK_PRODUCTS } from "@/data/catalog";
 import { getErrorMessage } from "@/lib/errors";
 import { getSupabase, hasSupabaseEnv } from "@/lib/supabase";
 import type { Category, Product, Profile } from "@/lib/types";
+import { uploadAvatarFromUri } from "@/lib/uploadAvatar";
 
 type CartRow = {
   id: string;
@@ -297,7 +298,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (error) throw error;
         if (!data.user) throw new Error("Could not create account");
 
-        let avatarUrl: string | null = input.avatarUri ?? null;
+        let avatarUrl: string | null = null;
+        if (input.avatarUri && data.session) {
+          avatarUrl = await uploadAvatarFromUri(
+            supabase,
+            data.user.id,
+            input.avatarUri,
+          );
+        }
 
         const { error: profileError } = await supabase.from("profiles").upsert({
           id: data.user.id,
@@ -551,26 +559,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       const supabase = getSupabase();
       if (supabase) {
+        const publicUrl = await uploadAvatarFromUri(supabase, user.id, uri);
+
         const { error } = await supabase
           .from("profiles")
-          .update({ avatar_url: uri })
+          .update({ avatar_url: publicUrl })
           .eq("id", user.id);
         if (error) throw error;
-      } else {
-        const rawUsers = await AsyncStorage.getItem(STORAGE_USERS);
-        if (rawUsers) {
-          const users = JSON.parse(rawUsers) as Array<
-            Profile & { password: string }
-          >;
-          await AsyncStorage.setItem(
-            STORAGE_USERS,
-            JSON.stringify(
-              users.map((u) =>
-                u.id === user.id ? { ...u, avatar_url: uri } : u,
-              ),
+
+        await persistUser({ ...user, avatar_url: publicUrl });
+        return;
+      }
+
+      const rawUsers = await AsyncStorage.getItem(STORAGE_USERS);
+      if (rawUsers) {
+        const users = JSON.parse(rawUsers) as Array<
+          Profile & { password: string }
+        >;
+        await AsyncStorage.setItem(
+          STORAGE_USERS,
+          JSON.stringify(
+            users.map((u) =>
+              u.id === user.id ? { ...u, avatar_url: uri } : u,
             ),
-          );
-        }
+          ),
+        );
       }
 
       await persistUser({ ...user, avatar_url: uri });
