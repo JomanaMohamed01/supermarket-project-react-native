@@ -596,68 +596,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     const supabase = getSupabase();
     if (supabase) {
-      const deleteUrl = process.env.EXPO_PUBLIC_DELETE_ACCOUNT_URL?.trim();
-      let deleted = false;
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-      // 1) Prefer the web delete API when configured (same as the website).
-      if (deleteUrl) {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
-        if (!session?.access_token) {
-          throw new Error("Please sign in again, then delete your account.");
-        }
-
-        try {
-          const response = await fetch(deleteUrl, {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${session.access_token}`,
-              Accept: "application/json",
-            },
-          });
-
-          const payload = (await response.json().catch(() => null)) as {
-            error?: unknown;
-            ok?: boolean;
-          } | null;
-
-          if (response.ok) {
-            deleted = true;
-          } else if (response.status !== 0) {
-            // Server responded — surface that error instead of silently falling back.
-            const message = getErrorMessage(
-              payload?.error,
-              `Could not delete account (${response.status})`,
-            );
-            // If the API route is missing, try RPC next.
-            if (response.status !== 404) {
-              throw new Error(message);
-            }
-          }
-        } catch (err) {
-          // Connection refused / network error → try RPC below.
-          if (
-            err instanceof Error &&
-            !/Failed to fetch|Network request failed|ECONNREFUSED/i.test(
-              err.message,
-            )
-          ) {
-            throw err;
-          }
-        }
+      if (!session?.access_token) {
+        throw new Error("Please sign in again, then delete your account.");
       }
 
-      // 2) Supabase RPC (run supabase/delete_own_account.sql once).
-      if (!deleted) {
-        const { error: rpcError } = await supabase.rpc("delete_own_account");
-        if (rpcError) {
-          throw new Error(
-            "Could not delete account. Start the supermarket web app (npm run dev on port 3000), or run supabase/delete_own_account.sql once in the Supabase SQL Editor.",
-          );
-        }
-        deleted = true;
+      // Same Supabase user whether the account was created on the website or in the app.
+      const { data: avatarFiles } = await supabase.storage
+        .from("avatars")
+        .list(user.id);
+      if (avatarFiles?.length) {
+        await supabase.storage
+          .from("avatars")
+          .remove(avatarFiles.map((file) => `${user.id}/${file.name}`));
+      }
+
+      const { error: rpcError } = await supabase.rpc("delete_own_account");
+      if (rpcError) {
+        const missingFunction =
+          rpcError.code === "PGRST202" ||
+          /could not find the function/i.test(rpcError.message ?? "");
+        throw new Error(
+          missingFunction
+            ? "Account deletion is not set up in Supabase yet. Open the SQL Editor and run supabase/delete_own_account.sql once, then try again."
+            : getErrorMessage(rpcError, "Could not delete account"),
+        );
       }
 
       try {
