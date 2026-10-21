@@ -1,4 +1,5 @@
-import { ActivityIndicator, Modal, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef } from "react";
+import { Animated, Easing, Modal, StyleSheet, Text, View } from "react-native";
 import { colors } from "@/constants/theme";
 
 type ActionLoaderProps = {
@@ -6,19 +7,42 @@ type ActionLoaderProps = {
   visible?: boolean;
 };
 
+const CORE_SIZE = 44;
+const ORBIT_SIZE = 96;
+
 export function ActionLoader({ message, visible = true }: ActionLoaderProps) {
+  const spin = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!visible) return;
+
+    spin.setValue(0);
+    const animation = Animated.loop(
+      Animated.timing(spin, {
+        toValue: 1,
+        duration: 900,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    );
+    animation.start();
+
+    return () => animation.stop();
+  }, [spin, visible]);
+
+  const rotate = spin.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "360deg"],
+  });
+
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.overlay}>
         <View style={styles.ring}>
+          <Animated.View style={[styles.orbit, { transform: [{ rotate }] }]} />
           <View style={styles.core}>
             <Text style={styles.coreText}>F</Text>
           </View>
-          <ActivityIndicator
-            size="large"
-            color={colors.leaf}
-            style={styles.spinner}
-          />
         </View>
         <Text style={styles.message}>{message}</Text>
       </View>
@@ -35,23 +59,27 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   ring: {
-    width: 72,
-    height: 72,
+    width: ORBIT_SIZE,
+    height: ORBIT_SIZE,
     alignItems: "center",
     justifyContent: "center",
   },
-  spinner: {
+  orbit: {
     position: "absolute",
-    transform: [{ scale: 1.6 }],
+    width: ORBIT_SIZE,
+    height: ORBIT_SIZE,
+    borderRadius: ORBIT_SIZE / 2,
+    borderWidth: 3,
+    borderColor: "transparent",
+    borderTopColor: colors.leaf,
   },
   core: {
-    width: 44,
-    height: 44,
+    width: CORE_SIZE,
+    height: CORE_SIZE,
     borderRadius: 14,
     backgroundColor: colors.leaf,
     alignItems: "center",
     justifyContent: "center",
-    zIndex: 1,
   },
   coreText: {
     color: colors.cream,
