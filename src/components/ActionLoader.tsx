@@ -3,7 +3,7 @@ import { Animated, Easing, Modal, StyleSheet, Text, View } from "react-native";
 import { colors } from "@/constants/theme";
 
 type ActionLoaderProps = {
-  message: string;
+  message?: string;
   visible?: boolean;
 };
 
@@ -44,7 +44,7 @@ export function ActionLoader({ message, visible = true }: ActionLoaderProps) {
             <Text style={styles.coreText}>F</Text>
           </View>
         </View>
-        <Text style={styles.message}>{message}</Text>
+        {message ? <Text style={styles.message}>{message}</Text> : null}
       </View>
     </Modal>
   );

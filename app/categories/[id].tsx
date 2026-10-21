@@ -1,5 +1,6 @@
 import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { ActionLoader } from "@/components/ActionLoader";
 import { AddToCartButton } from "@/components/AddToCartButton";
 import { AppShell } from "@/components/AppShell";
 import { ProductImage } from "@/components/ProductImage";
@@ -12,7 +13,8 @@ export default function CategoryProductsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { ready, user, getCategory, getProductsByCategory } = useApp();
 
-  if (ready && !user) return <Redirect href="/login" />;
+  if (!ready) return <ActionLoader message="Loading..." />;
+  if (!user) return <Redirect href="/login" />;
 
   const category = getCategory(id);
   const products = getProductsByCategory(id);
