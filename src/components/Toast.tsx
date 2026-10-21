@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { Modal, StyleSheet, Text, View } from "react-native";
+import { useEffect, type ReactNode } from "react";
+import { Modal, Platform, StyleSheet, Text, View } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -53,6 +53,34 @@ export function Toast({
     opacity: opacity.value,
   }));
 
+  const body = (
+    <View
+      pointerEvents="none"
+      style={[
+        styles.wrap,
+        Platform.OS === "web" ? styles.webWrap : styles.nativeWrap,
+        { paddingTop: insets.top + 12 },
+      ]}
+    >
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.toast,
+          tone === "error" ? styles.error : styles.success,
+          shadow,
+          animatedStyle,
+        ]}
+      >
+        <Text style={styles.text}>{message}</Text>
+      </Animated.View>
+    </View>
+  );
+
+  if (Platform.OS === "web") {
+    if (!visible) return null;
+    return <WebPortal>{body}</WebPortal>;
+  }
+
   return (
     <Modal
       visible={visible}
@@ -61,30 +89,33 @@ export function Toast({
       statusBarTranslucent
       onRequestClose={onHide}
     >
-      <View
-        pointerEvents="box-none"
-        style={[styles.wrap, { paddingTop: insets.top + 12 }]}
-      >
-        <Animated.View
-          style={[
-            styles.toast,
-            tone === "error" ? styles.error : styles.success,
-            shadow,
-            animatedStyle,
-          ]}
-        >
-          <Text style={styles.text}>{message}</Text>
-        </Animated.View>
-      </View>
+      {body}
     </Modal>
   );
 }
 
+function WebPortal({ children }: { children: ReactNode }) {
+  if (typeof document === "undefined") return null;
+  const { createPortal } = require("react-dom") as {
+    createPortal: (node: ReactNode, container: HTMLElement) => ReactNode;
+  };
+  return createPortal(children, document.body);
+}
+
 const styles = StyleSheet.create({
   wrap: {
-    flex: 1,
     alignItems: "center",
     paddingHorizontal: 16,
+  },
+  nativeWrap: {
+    flex: 1,
+  },
+  webWrap: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 9999,
   },
   toast: {
     borderRadius: 16,
