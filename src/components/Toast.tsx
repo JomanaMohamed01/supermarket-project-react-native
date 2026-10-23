@@ -1,5 +1,6 @@
-import { useEffect, type ReactNode } from "react";
-import { Modal, Platform, StyleSheet, Text, View } from "react-native";
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
+import { Platform, StyleSheet, Text, View } from "react-native";
+import { useToastLayer } from "@/components/ToastLayer";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -24,6 +25,9 @@ export function Toast({
   durationMs = 2500,
 }: ToastProps) {
   const insets = useSafeAreaInsets();
+  const layer = useToastLayer();
+  const id = useRef(0);
+  if (id.current === 0) id.current = nextToastId++;
   const translateY = useSharedValue(-120);
   const opacity = useSharedValue(0);
 
@@ -76,23 +80,29 @@ export function Toast({
     </View>
   );
 
+  useLayoutEffect(() => {
+    if (Platform.OS === "web" || !layer) return;
+    if (!visible) {
+      layer.unmount(id.current);
+      return;
+    }
+    layer.mount(id.current, body);
+  }, [layer, message, tone, visible, insets.top]);
+
+  useEffect(() => {
+    const toastId = id.current;
+    return () => layer?.unmount(toastId);
+  }, [layer]);
+
   if (Platform.OS === "web") {
     if (!visible) return null;
     return <WebPortal>{body}</WebPortal>;
   }
 
-  return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="none"
-      statusBarTranslucent
-      onRequestClose={onHide}
-    >
-      {body}
-    </Modal>
-  );
+  return null;
 }
+
+let nextToastId = 1;
 
 function WebPortal({ children }: { children: ReactNode }) {
   if (typeof document === "undefined") return null;
@@ -108,7 +118,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   nativeWrap: {
-    flex: 1,
+    width: "100%",
   },
   webWrap: {
     position: "fixed",

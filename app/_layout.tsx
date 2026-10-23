@@ -16,6 +16,7 @@ import { useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { colors } from "@/constants/theme";
+import { ToastLayer } from "@/components/ToastLayer";
 import { AppProvider } from "@/providers/AppProvider";
 
 SplashScreen.preventAutoHideAsync();
@@ -42,14 +43,16 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.cream }}>
       <AppProvider>
-        <StatusBar style="dark" />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: colors.cream },
-            animation: "fade",
-          }}
-        />
+        <ToastLayer>
+          <StatusBar style="dark" />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: colors.cream },
+              animation: "fade",
+            }}
+          />
+        </ToastLayer>
       </AppProvider>
     </GestureHandlerRootView>
   );
