@@ -58,7 +58,7 @@ export function Toast({
   dismissRef.current = dismiss;
 
   const dismissFromGesture = useCallback(() => {
-    dismissRef.current();
+    dismissAllToasts();
   }, []);
 
   const pan = useMemo(
@@ -144,6 +144,14 @@ export function Toast({
   }, [layer, message, tone, visible, insets.top]);
 
   useEffect(() => {
+    const hide = () => dismissRef.current();
+    dismissers.add(hide);
+    return () => {
+      dismissers.delete(hide);
+    };
+  }, []);
+
+  useEffect(() => {
     const toastId = id.current;
     return () => layer?.unmount(toastId);
   }, [layer]);
@@ -157,6 +165,11 @@ export function Toast({
 }
 
 let nextToastId = 1;
+const dismissers = new Set<() => void>();
+
+function dismissAllToasts() {
+  dismissers.forEach((dismiss) => dismiss());
+}
 
 function WebPortal({ children }: { children: ReactNode }) {
   if (typeof document === "undefined") return null;

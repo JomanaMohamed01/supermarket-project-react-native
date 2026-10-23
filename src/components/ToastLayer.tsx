@@ -44,8 +44,12 @@ export function ToastLayer({ children }: { children: ReactNode }) {
       <View style={styles.host}>
         {children}
         <View pointerEvents="box-none" style={styles.overlay}>
-          {slots.map((slot) => (
-            <View key={slot.id} pointerEvents="box-none">
+          {slots.map((slot, index) => (
+            <View
+              key={slot.id}
+              pointerEvents={index === slots.length - 1 ? "box-none" : "none"}
+              style={[styles.slot, { zIndex: index + 1, elevation: index + 1 }]}
+            >
               {slot.node}
             </View>
           ))}
@@ -70,5 +74,11 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     zIndex: 1000,
+  },
+  slot: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    left: 0,
   },
 });
