@@ -37,10 +37,9 @@ export default function AccountScreen() {
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [addressError, setAddressError] = useState<string | null>(null);
-  const [addressToast, setAddressToast] = useState(false);
   const [avatarBroken, setAvatarBroken] = useState(false);
 
   useEffect(() => {
@@ -59,7 +58,7 @@ export default function AccountScreen() {
     user.email.charAt(0).toUpperCase();
 
   async function saveAddress() {
-    setMessage(null);
+    setToastMessage(null);
     setError(null);
     setAddressError(null);
 
@@ -71,7 +70,7 @@ export default function AccountScreen() {
     setSavingAddress(true);
     try {
       await updateAddress(address);
-      setAddressToast(true);
+      setToastMessage("Address updated successfully.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not update address");
     } finally {
@@ -89,11 +88,11 @@ export default function AccountScreen() {
     if (result.canceled || !result.assets[0]) return;
 
     setUploading(true);
-    setMessage(null);
+    setToastMessage(null);
     setError(null);
     try {
       await updateAvatar(result.assets[0].uri);
-      setMessage("Profile picture updated.");
+      setToastMessage("Profile picture updated successfully!");
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Could not upload profile picture",
@@ -120,9 +119,9 @@ export default function AccountScreen() {
     <>
       {deleting && <ActionLoader message="Deleting account..." />}
       <Toast
-        visible={addressToast}
-        message="Address updated successfully."
-        onHide={() => setAddressToast(false)}
+        visible={Boolean(toastMessage)}
+        message={toastMessage ?? ""}
+        onHide={() => setToastMessage(null)}
         durationMs={3500}
       />
 
@@ -203,11 +202,6 @@ export default function AccountScreen() {
           </Pressable>
         </View>
 
-        {message && (
-          <View style={styles.successBox}>
-            <Text style={styles.successText}>{message}</Text>
-          </View>
-        )}
         {error && (
           <View style={styles.errorBox}>
             <Text style={styles.errorText}>{error}</Text>
@@ -352,13 +346,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   inputError: { borderColor: colors.danger },
-  successBox: {
-    backgroundColor: "rgba(45,106,79,0.1)",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
-  },
-  successText: { color: colors.leaf, fontWeight: "700", fontSize: 13 },
   errorBox: {
     backgroundColor: "rgba(180,35,24,0.1)",
     borderRadius: 12,
