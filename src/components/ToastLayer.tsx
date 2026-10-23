@@ -45,7 +45,7 @@ export function ToastLayer({ children }: { children: ReactNode }) {
         {children}
         <View pointerEvents="box-none" style={styles.overlay}>
           {slots.map((slot) => (
-            <View key={slot.id} pointerEvents="none">
+            <View key={slot.id} pointerEvents="box-none">
               {slot.node}
             </View>
           ))}

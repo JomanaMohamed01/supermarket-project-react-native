@@ -1,11 +1,13 @@
-import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
-import { useToastLayer } from "@/components/ToastLayer";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
+import { useToastLayer } from "@/components/ToastLayer";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, shadow } from "@/constants/theme";
 
@@ -29,54 +31,106 @@ export function Toast({
   const id = useRef(0);
   if (id.current === 0) id.current = nextToastId++;
   const translateY = useSharedValue(-120);
+  const dragY = useSharedValue(0);
   const opacity = useSharedValue(0);
+  const timers = useRef<Array<ReturnType<typeof setTimeout>>>([]);
+  const dismissed = useRef(false);
+  const dismissRef = useRef<() => void>(() => {});
+
+  const clearTimers = useCallback(() => {
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
+  }, []);
+
+  const dismiss = useCallback(() => {
+    if (dismissed.current) return;
+    dismissed.current = true;
+    clearTimers();
+    dragY.value = withTiming(-180, { duration: 180 });
+    opacity.value = withTiming(0, { duration: 180 });
+    timers.current.push(
+      setTimeout(() => {
+        onHide?.();
+      }, 180),
+    );
+  }, [clearTimers, dragY, onHide, opacity]);
+
+  dismissRef.current = dismiss;
+
+  const dismissFromGesture = useCallback(() => {
+    dismissRef.current();
+  }, []);
+
+  const pan = useMemo(
+    () =>
+      Gesture.Pan()
+        .activeOffsetY(-10)
+        .failOffsetY(16)
+        .onUpdate((event) => {
+          dragY.value = Math.min(0, event.translationY);
+        })
+        .onEnd((event) => {
+          if (event.translationY < -28 || event.velocityY < -800) {
+            runOnJS(dismissFromGesture)();
+            return;
+          }
+          dragY.value = withTiming(0, { duration: 180 });
+        }),
+    [dismissFromGesture, dragY],
+  );
 
   useEffect(() => {
-    if (!visible) return;
+    if (!visible) {
+      dismissed.current = false;
+      return;
+    }
 
+    dismissed.current = false;
+    dragY.value = 0;
     translateY.value = withTiming(0, { duration: 350 });
     opacity.value = withTiming(1, { duration: 350 });
 
-    const exit = setTimeout(() => {
-      translateY.value = withTiming(-120, { duration: 400 });
-      opacity.value = withTiming(0, { duration: 400 });
-    }, durationMs);
+    timers.current.push(
+      setTimeout(() => {
+        translateY.value = withTiming(-120, { duration: 400 });
+        opacity.value = withTiming(0, { duration: 400 });
+      }, durationMs),
+    );
+    timers.current.push(
+      setTimeout(() => {
+        onHide?.();
+      }, durationMs + 450),
+    );
 
-    const hide = setTimeout(() => {
-      onHide?.();
-    }, durationMs + 450);
-
-    return () => {
-      clearTimeout(exit);
-      clearTimeout(hide);
-    };
-  }, [visible, durationMs, onHide, opacity, translateY]);
+    return () => clearTimers();
+  }, [visible, durationMs, onHide, opacity, translateY, dragY, clearTimers]);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
+    transform: [{ translateY: translateY.value + dragY.value }],
     opacity: opacity.value,
   }));
 
   const body = (
     <View
-      pointerEvents="none"
+      pointerEvents="box-none"
       style={[
         styles.wrap,
         Platform.OS === "web" ? styles.webWrap : styles.nativeWrap,
         { paddingTop: insets.top + 12 },
       ]}
     >
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          styles.toast,
-          tone === "error" ? styles.error : styles.success,
-          shadow,
-          animatedStyle,
-        ]}
-      >
-        <Text style={styles.text}>{message}</Text>
-      </Animated.View>
+      <GestureDetector gesture={pan}>
+        <Animated.View
+          style={[
+            styles.toast,
+            tone === "error" ? styles.error : styles.success,
+            shadow,
+            animatedStyle,
+          ]}
+        >
+          <Text style={styles.text}>{message}</Text>
+        </Animated.View>
+      </GestureDetector>
     </View>
   );
 
