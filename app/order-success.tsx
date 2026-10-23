@@ -1,14 +1,27 @@
-import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
+import { Redirect, Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { AppShell } from "@/components/AppShell";
 import { colors, shadow } from "@/constants/theme";
 import { formatMoney } from "@/lib/format";
+import { setOrderPlacing } from "@/lib/orderPlacement";
 import { useApp } from "@/providers/AppProvider";
 
 export default function OrderSuccessScreen() {
   const router = useRouter();
   const { ready, user } = useApp();
-  const params = useLocalSearchParams<{ order?: string; total?: string }>();
+  const params = useLocalSearchParams<{
+    order?: string;
+    total?: string;
+    error?: string;
+  }>();
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      setOrderPlacing(false);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, []);
 
   if (ready && !user) return <Redirect href="/login" />;
 
@@ -18,14 +31,18 @@ export default function OrderSuccessScreen() {
       : null;
 
   return (
-    <AppShell>
+    <>
+      <Stack.Screen options={{ animation: "none" }} />
+      <AppShell>
       <View style={[styles.card, shadow]}>
         <Text style={styles.eyebrow}>Order placed</Text>
         <Text style={styles.title}>Thanks for shopping FreshLane</Text>
         <Text style={styles.body}>
-          Your order is saved
-          {params.order ? ` (#${String(params.order).slice(-8)})` : ""}. You can
-          keep browsing the aisles whenever you&apos;re ready.
+          {params.error
+            ? params.error
+            : `Your order is saved${
+                params.order ? ` (#${String(params.order).slice(-8)})` : ""
+              }. You can keep browsing the aisles whenever you're ready.`}
         </Text>
         {total !== null && !Number.isNaN(total) && (
           <Text style={styles.total}>{formatMoney(total)}</Text>
@@ -38,6 +55,7 @@ export default function OrderSuccessScreen() {
         </Pressable>
       </View>
     </AppShell>
+    </>
   );
 }
 

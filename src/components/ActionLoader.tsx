@@ -5,12 +5,17 @@ import { colors } from "@/constants/theme";
 type ActionLoaderProps = {
   message?: string;
   visible?: boolean;
+  asModal?: boolean;
 };
 
 const CORE_SIZE = 44;
 const ORBIT_SIZE = 96;
 
-export function ActionLoader({ message, visible = true }: ActionLoaderProps) {
+export function ActionLoader({
+  message,
+  visible = true,
+  asModal = true,
+}: ActionLoaderProps) {
   const spin = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -35,17 +40,26 @@ export function ActionLoader({ message, visible = true }: ActionLoaderProps) {
     outputRange: ["0deg", "360deg"],
   });
 
-  return (
-    <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.overlay}>
-        <View style={styles.ring}>
-          <Animated.View style={[styles.orbit, { transform: [{ rotate }] }]} />
-          <View style={styles.core}>
-            <Text style={styles.coreText}>F</Text>
-          </View>
+  const content = (
+    <View style={[styles.overlay, !asModal && styles.overlayCover]} pointerEvents="auto">
+      <View style={styles.ring}>
+        <Animated.View style={[styles.orbit, { transform: [{ rotate }] }]} />
+        <View style={styles.core}>
+          <Text style={styles.coreText}>F</Text>
         </View>
-        {message ? <Text style={styles.message}>{message}</Text> : null}
       </View>
+      {message ? <Text style={styles.message}>{message}</Text> : null}
+    </View>
+  );
+
+  if (!asModal) {
+    if (!visible) return null;
+    return content;
+  }
+
+  return (
+    <Modal visible={visible} transparent animationType="none">
+      {content}
     </Modal>
   );
 }
@@ -57,6 +71,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 20,
+  },
+  overlayCover: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    zIndex: 2000,
   },
   ring: {
     width: ORBIT_SIZE,

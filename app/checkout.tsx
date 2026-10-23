@@ -1,18 +1,18 @@
 import { Redirect, useRouter } from "expo-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { ActionLoader } from "@/components/ActionLoader";
 import { AppShell } from "@/components/AppShell";
 import { ProductImage } from "@/components/ProductImage";
 import { colors, shadow } from "@/constants/theme";
 import { formatMoney } from "@/lib/format";
+import { setOrderPlacing } from "@/lib/orderPlacement";
 import { useApp } from "@/providers/AppProvider";
 
 export default function CheckoutScreen() {
   const router = useRouter();
   const { ready, user, cartItems, placeOrder } = useApp();
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const placing = useRef(false);
 
   if (ready && !user) return <Redirect href="/login" />;
 
@@ -22,8 +22,10 @@ export default function CheckoutScreen() {
   );
 
   async function onPlaceOrder() {
-    setLoading(true);
+    if (placing.current) return;
+    placing.current = true;
     setError(null);
+    setOrderPlacing(true);
     try {
       const result = await placeOrder();
       router.replace({
@@ -31,15 +33,14 @@ export default function CheckoutScreen() {
         params: { order: result.orderId, total: String(result.total) },
       });
     } catch (err) {
+      setOrderPlacing(false);
+      placing.current = false;
       setError(err instanceof Error ? err.message : "Could not place order");
-      setLoading(false);
     }
   }
 
   return (
-    <>
-      {loading && <ActionLoader message="Placing order..." />}
-      <AppShell>
+    <AppShell>
         <View style={styles.center}>
           <Text style={styles.eyebrow}>Checkout</Text>
           <Text style={styles.title}>Review & pay</Text>
@@ -93,18 +94,14 @@ export default function CheckoutScreen() {
             )}
 
             <Pressable
-              style={[styles.payBtn, loading && styles.disabled]}
+              style={styles.payBtn}
               onPress={() => void onPlaceOrder()}
-              disabled={loading}
             >
-              <Text style={styles.payBtnText}>
-                {loading ? "Placing order..." : "Proceed payment"}
-              </Text>
+              <Text style={styles.payBtnText}>Proceed payment</Text>
             </Pressable>
           </View>
         )}
       </AppShell>
-    </>
   );
 }
 
@@ -191,5 +188,4 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   payBtnText: { color: colors.cream, fontSize: 17, fontWeight: "700" },
-  disabled: { opacity: 0.6 },
 });
