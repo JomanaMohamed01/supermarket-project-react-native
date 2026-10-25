@@ -14,8 +14,8 @@ import {
 } from "react-native";
 import { Eye, EyeOff } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ActionLoader } from "@/components/ActionLoader";
 import { colors, shadow } from "@/constants/theme";
+import { setAccountCreating } from "@/lib/accountCreation";
 import {
   getEmailValidationError,
   getPasswordStrength,
@@ -123,6 +123,7 @@ export default function SignupScreen() {
     }
 
     setLoading(true);
+    setAccountCreating(true);
     try {
       await signUp({
         fullName,
@@ -134,6 +135,7 @@ export default function SignupScreen() {
       });
       router.replace("/categories");
     } catch (err) {
+      setAccountCreating(false);
       setError(err instanceof Error ? err.message : "Something went wrong");
       setLoading(false);
     }
@@ -141,7 +143,6 @@ export default function SignupScreen() {
 
   return (
     <>
-      {loading && <ActionLoader message="Creating account..." />}
       <KeyboardAvoidingView
         style={styles.root}
         behavior={Platform.OS === "ios" ? "padding" : undefined}

@@ -12,13 +12,15 @@ import {
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { View } from "react-native";
 import { colors } from "@/constants/theme";
+import { ActionLoader } from "@/components/ActionLoader";
 import { OrderPlacingGate } from "@/components/OrderPlacingGate";
 import { ToastLayer } from "@/components/ToastLayer";
+import { subscribeAccountCreating } from "@/lib/accountCreation";
 import { AppProvider } from "@/providers/AppProvider";
 
 SplashScreen.preventAutoHideAsync();
@@ -40,6 +42,10 @@ export default function RootLayout() {
     }
   }, [fontsLoaded]);
 
+  const [creatingAccount, setCreatingAccount] = useState(false);
+
+  useEffect(() => subscribeAccountCreating(setCreatingAccount), []);
+
   if (!fontsLoaded) return null;
 
   return (
@@ -52,11 +58,14 @@ export default function RootLayout() {
               screenOptions={{
                 headerShown: false,
                 contentStyle: { backgroundColor: colors.cream },
-                animation: "fade",
+                animation: creatingAccount ? "none" : "fade",
               }}
             />
           </ToastLayer>
           <OrderPlacingGate />
+          {creatingAccount ? (
+            <ActionLoader message="Creating account..." />
+          ) : null}
         </View>
       </AppProvider>
     </GestureHandlerRootView>

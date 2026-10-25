@@ -1,13 +1,26 @@
-import { Redirect, useRouter } from "expo-router";
+import { Redirect, useNavigation, useRouter } from "expo-router";
+import { useEffect } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { AppShell } from "@/components/AppShell";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { colors, shadow } from "@/constants/theme";
+import { isAccountCreating, setAccountCreating } from "@/lib/accountCreation";
 import { useApp } from "@/providers/AppProvider";
 
 export default function CategoriesScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { ready, user, categories } = useApp();
+
+  useEffect(() => {
+    const hideLoader = () => {
+      if (!isAccountCreating()) return;
+      requestAnimationFrame(() => setAccountCreating(false));
+    };
+
+    hideLoader();
+    return navigation.addListener("focus", hideLoader);
+  }, [navigation]);
 
   if (ready && !user) return <Redirect href="/login" />;
 
