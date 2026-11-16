@@ -237,13 +237,16 @@ export default function AccountScreen() {
             </Text>
             <View style={styles.modalActions}>
               <Pressable
+                style={[styles.dangerBtn, styles.modalDangerBtn]}
+                onPress={() => void onDelete()}
+              >
+                <Text style={styles.dangerBtnText}>Yes, delete account</Text>
+              </Pressable>
+              <Pressable
                 style={styles.cancelBtn}
                 onPress={() => setConfirmOpen(false)}
               >
                 <Text style={styles.cancelText}>Cancel</Text>
-              </Pressable>
-              <Pressable style={styles.dangerBtn} onPress={() => void onDelete()}>
-                <Text style={styles.dangerBtnText}>Yes, delete account</Text>
               </Pressable>
             </View>
           </Pressable>
@@ -403,6 +406,7 @@ const styles = StyleSheet.create({
     color: colors.inkSoft,
   },
   modalActions: { marginTop: 20, gap: 10 },
+  modalDangerBtn: { marginTop: 0 },
   cancelBtn: {
     borderWidth: 1,
     borderColor: colors.line,
