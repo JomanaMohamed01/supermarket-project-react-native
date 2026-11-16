@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { Eye, EyeOff } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Toast } from "@/components/Toast";
 import { colors, shadow } from "@/constants/theme";
 import { setAccountCreating } from "@/lib/accountCreation";
 import {
@@ -43,6 +44,7 @@ export default function SignupScreen() {
   const [addressError, setAddressError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (ready && user) router.replace("/categories");
@@ -80,29 +82,20 @@ export default function SignupScreen() {
     setEmailError(null);
     setPasswordError(null);
 
-    const requiredMessage = "This field needs to be filled";
-    let hasEmpty = false;
-    if (!fullName.trim()) {
-      setFullNameError(requiredMessage);
-      hasEmpty = true;
+    const emptyFields: string[] = [];
+    if (!fullName.trim()) emptyFields.push("Full name");
+    if (!phone.trim()) emptyFields.push("Phone number");
+    if (!address.trim()) emptyFields.push("Address");
+    if (!email.trim()) emptyFields.push("Email");
+    if (!password) emptyFields.push("Password");
+    if (emptyFields.length > 0) {
+      const notice = emptyFields
+        .map((field) => `Please enter a ${field}`)
+        .join("\n");
+      setToastMessage(null);
+      setTimeout(() => setToastMessage(notice), 0);
+      return;
     }
-    if (!phone.trim()) {
-      setPhoneError(requiredMessage);
-      hasEmpty = true;
-    }
-    if (!address.trim()) {
-      setAddressError(requiredMessage);
-      hasEmpty = true;
-    }
-    if (!email.trim()) {
-      setEmailError(requiredMessage);
-      hasEmpty = true;
-    }
-    if (!password) {
-      setPasswordError(requiredMessage);
-      hasEmpty = true;
-    }
-    if (hasEmpty) return;
 
     const emailValidationError = getEmailValidationError(email);
     if (emailValidationError) {
@@ -143,6 +136,13 @@ export default function SignupScreen() {
 
   return (
     <>
+      <Toast
+        visible={Boolean(toastMessage)}
+        message={toastMessage ?? ""}
+        tone="error"
+        onHide={() => setToastMessage(null)}
+        durationMs={3500}
+      />
       <KeyboardAvoidingView
         style={styles.root}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
