@@ -116,8 +116,6 @@ export default function LoginScreen() {
                 autoCapitalize="none"
                 keyboardType="email-address"
                 autoComplete="email"
-                placeholder="you@email.com"
-                placeholderTextColor={colors.inkSoft}
                 style={[styles.input, emailError && styles.inputError]}
               />
               {emailError && <Text style={styles.fieldError}>{emailError}</Text>}
@@ -135,8 +133,6 @@ export default function LoginScreen() {
                   }}
                   secureTextEntry={!showPassword}
                   autoComplete="password"
-                  placeholder="At least 6 characters"
-                  placeholderTextColor={colors.inkSoft}
                   style={[
                     styles.input,
                     styles.passwordInput,
