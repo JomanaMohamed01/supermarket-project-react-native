@@ -99,9 +99,9 @@ export default function SignupScreen() {
       return;
     }
 
-    const emailValidationError = getEmailValidationError(email);
-    if (emailValidationError) {
-      setEmailError(emailValidationError);
+    if (getEmailValidationError(email)) {
+      setToastMessage(null);
+      setTimeout(() => setToastMessage("Please enter a correct email"), 0);
       return;
     }
 
