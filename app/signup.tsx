@@ -90,7 +90,9 @@ export default function SignupScreen() {
     if (!password) emptyFields.push("Password");
     if (emptyFields.length > 0) {
       const notice = emptyFields
-        .map((field) => `Please enter a ${field}`)
+        .map((field) =>
+          `Please enter ${field === "Address" || field === "Email" ? "an" : "a"} ${field}`,
+        )
         .join("\n");
       setToastMessage(null);
       setTimeout(() => setToastMessage(notice), 0);
