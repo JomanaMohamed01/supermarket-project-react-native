@@ -24,6 +24,7 @@ export function SiteHeader() {
   const insets = useSafeAreaInsets();
   const { user, cartCount, signOut } = useApp();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
   const [avatarBroken, setAvatarBroken] = useState(false);
 
   useEffect(() => {
@@ -37,8 +38,13 @@ export function SiteHeader() {
     user.email.charAt(0).toUpperCase() ||
     "U";
 
-  async function handleSignOut() {
+  function askSignOut() {
     setMenuOpen(false);
+    setConfirmSignOut(true);
+  }
+
+  async function handleSignOut() {
+    setConfirmSignOut(false);
     await signOut();
     router.replace("/login");
   }
@@ -111,8 +117,35 @@ export function SiteHeader() {
                 router.push("/account");
               }}
             />
-            <MenuItem label="Sign out" onPress={() => void handleSignOut()} />
+            <MenuItem label="Sign out" onPress={askSignOut} />
           </View>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        visible={confirmSignOut}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setConfirmSignOut(false)}
+      >
+        <Pressable
+          style={styles.confirmBackdrop}
+          onPress={() => setConfirmSignOut(false)}
+        >
+          <Pressable style={[styles.confirmCard, shadow]} onPress={() => {}}>
+            <Text style={styles.confirmTitle}>Do you want to sign out?</Text>
+            <View style={styles.confirmActions}>
+              <Pressable
+                style={styles.noBtn}
+                onPress={() => setConfirmSignOut(false)}
+              >
+                <Text style={styles.noText}>No</Text>
+              </Pressable>
+              <Pressable style={styles.yesBtn} onPress={() => void handleSignOut()}>
+                <Text style={styles.yesText}>Yes</Text>
+              </Pressable>
+            </View>
+          </Pressable>
         </Pressable>
       </Modal>
     </View>
@@ -257,5 +290,58 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "700",
     color: colors.ink,
+  },
+  confirmBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(20,34,26,0.45)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  confirmCard: {
+    width: "100%",
+    maxWidth: 340,
+    backgroundColor: colors.cream,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: 24,
+  },
+  confirmTitle: {
+    fontSize: 22,
+    color: colors.ink,
+    fontFamily: "Fraunces_600SemiBold",
+    textAlign: "center",
+  },
+  confirmActions: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 20,
+  },
+  noBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  noText: {
+    fontWeight: "700",
+    color: colors.ink,
+    fontSize: 15,
+  },
+  yesBtn: {
+    flex: 1,
+    backgroundColor: colors.leaf,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  yesText: {
+    fontWeight: "700",
+    color: colors.cream,
+    fontSize: 15,
   },
 });
