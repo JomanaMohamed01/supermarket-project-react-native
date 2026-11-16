@@ -127,7 +127,7 @@ export default function AccountScreen() {
 
       <AppShell>
         <Text style={styles.eyebrow}>Account</Text>
-        <Text style={styles.title}>My account</Text>
+        <Text style={styles.title}>My profile</Text>
         <Text style={styles.subtitle}>
           View your details, update your address, and add a profile picture.
         </Text>
