@@ -211,8 +211,7 @@ export default function AccountScreen() {
         <View style={[styles.dangerCard, shadow]}>
           <Text style={styles.dangerTitle}>Delete account</Text>
           <Text style={styles.cardHint}>
-            Permanently delete your account, cart, and profile data. This cannot
-            be undone.
+            Permanently delete your account. This cannot be undone.
           </Text>
           <Pressable
             style={styles.dangerBtn}
