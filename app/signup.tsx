@@ -207,7 +207,6 @@ export default function SignupScreen() {
                 if (fullNameError) setFullNameError(null);
               }}
               error={fullNameError}
-              placeholder="Your name"
               autoComplete="name"
             />
             <Field
@@ -218,7 +217,6 @@ export default function SignupScreen() {
                 if (phoneError) setPhoneError(null);
               }}
               error={phoneError}
-              placeholder="e.g. 05XXXXXXXX"
               keyboardType="phone-pad"
               autoComplete="tel"
             />
@@ -230,7 +228,6 @@ export default function SignupScreen() {
                 if (addressError) setAddressError(null);
               }}
               error={addressError}
-              placeholder="Street, city"
               autoComplete="street-address"
             />
             <Field
@@ -241,7 +238,6 @@ export default function SignupScreen() {
                 if (emailError) setEmailError(null);
               }}
               error={emailError}
-              placeholder="you@email.com"
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
@@ -258,8 +254,6 @@ export default function SignupScreen() {
                   }}
                   secureTextEntry={!showPassword}
                   autoComplete="new-password"
-                  placeholder="At least 6 characters"
-                  placeholderTextColor={colors.inkSoft}
                   style={[
                     styles.input,
                     styles.passwordInput,
@@ -327,7 +321,6 @@ function Field({
       <Text style={styles.label}>{label}</Text>
       <TextInput
         {...props}
-        placeholderTextColor={colors.inkSoft}
         style={[styles.input, error && styles.inputError]}
       />
       {error && <Text style={styles.fieldError}>{error}</Text>}
