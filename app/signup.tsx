@@ -273,6 +273,9 @@ export default function SignupScreen() {
                   )}
                 </Pressable>
               </View>
+              <Text style={styles.passwordHint}>
+                Password must consist of alphabet, numbers & characters as ( /, *, _ ) etc
+              </Text>
               {passwordError && (
                 <Text style={styles.fieldError}>{passwordError}</Text>
               )}
@@ -439,6 +442,12 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     justifyContent: "center",
+  },
+  passwordHint: {
+    marginTop: 6,
+    color: colors.inkSoft,
+    fontSize: 12,
+    lineHeight: 18,
   },
   fieldError: {
     marginTop: 6,
