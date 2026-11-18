@@ -108,9 +108,8 @@ export default function SignupScreen() {
     }
 
     if (!passwordHasNumberAndSpecialChar(password)) {
-      setPasswordError(
-        "The password must contain characters and numbers (ex: /, _, *, etc..)",
-      );
+      setToastMessage(null);
+      setTimeout(() => setToastMessage("Please enter your password correctly"), 0);
       return;
     }
 
