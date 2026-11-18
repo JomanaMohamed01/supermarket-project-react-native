@@ -15,6 +15,7 @@ import {
 import { Eye, EyeOff } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Toast } from "@/components/Toast";
+import { useAuthFieldFocus } from "@/components/useAuthFieldFocus";
 import { colors, shadow } from "@/constants/theme";
 import { setAccountCreating } from "@/lib/accountCreation";
 import {
@@ -29,6 +30,7 @@ export default function SignupScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { ready, user, signUp } = useApp();
+  useAuthFieldFocus();
 
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
@@ -167,7 +169,7 @@ export default function SignupScreen() {
             </Text>
           </View>
 
-          <View style={[styles.card, shadow]}>
+          <View nativeID="auth-fields" style={[styles.card, shadow]}>
             <Text style={styles.cardTitle}>Create a new account</Text>
             <Text style={styles.cardSub}>
               Already shopping with us?{" "}
@@ -432,6 +434,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
     color: colors.ink,
+    ...(Platform.OS === "web"
+      ? { outlineWidth: 0, outlineStyle: "none" as const }
+      : {}),
   },
   inputError: { borderColor: colors.danger },
   passwordWrap: { position: "relative" },

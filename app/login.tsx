@@ -13,6 +13,7 @@ import {
 import { Eye, EyeOff } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ActionLoader } from "@/components/ActionLoader";
+import { useAuthFieldFocus } from "@/components/useAuthFieldFocus";
 import { colors, shadow } from "@/constants/theme";
 import { useApp } from "@/providers/AppProvider";
 
@@ -20,6 +21,7 @@ export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { ready, user, signIn, usingMockData } = useApp();
+  useAuthFieldFocus();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -96,7 +98,7 @@ export default function LoginScreen() {
             )}
           </View>
 
-          <View style={[styles.card, shadow]}>
+          <View nativeID="auth-fields" style={[styles.card, shadow]}>
             <Text style={styles.cardTitle}>Welcome back</Text>
             <Text style={styles.cardSub}>
               New here?{" "}
@@ -257,6 +259,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
     color: colors.ink,
+    ...(Platform.OS === "web"
+      ? { outlineWidth: 0, outlineStyle: "none" as const }
+      : {}),
   },
   inputError: { borderColor: colors.danger },
   passwordWrap: { position: "relative" },
