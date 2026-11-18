@@ -111,6 +111,13 @@ export function SiteHeader() {
               }}
             />
             <MenuItem
+              label="My orders"
+              onPress={() => {
+                setMenuOpen(false);
+                router.push("/orders");
+              }}
+            />
+            <MenuItem
               label="My profile"
               onPress={() => {
                 setMenuOpen(false);
