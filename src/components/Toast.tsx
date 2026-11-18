@@ -17,6 +17,7 @@ type ToastProps = {
   visible: boolean;
   onHide?: () => void;
   durationMs?: number;
+  preserveCase?: boolean;
 };
 
 export function Toast({
@@ -25,6 +26,7 @@ export function Toast({
   visible,
   onHide,
   durationMs = 2500,
+  preserveCase = false,
 }: ToastProps) {
   const insets = useSafeAreaInsets();
   const layer = useToastLayer();
@@ -128,7 +130,9 @@ export function Toast({
             animatedStyle,
           ]}
         >
-          <Text style={styles.text}>{formatTopMessage(message)}</Text>
+          <Text style={styles.text}>
+            {preserveCase ? message : formatTopMessage(message)}
+          </Text>
         </Animated.View>
       </GestureDetector>
     </View>

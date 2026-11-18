@@ -13,6 +13,7 @@ import {
 import { Eye, EyeOff } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ActionLoader } from "@/components/ActionLoader";
+import { Toast } from "@/components/Toast";
 import { useAuthFieldFocus } from "@/components/useAuthFieldFocus";
 import { colors, shadow } from "@/constants/theme";
 import { useApp } from "@/providers/AppProvider";
@@ -27,7 +28,7 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -41,7 +42,7 @@ export default function LoginScreen() {
   }
 
   async function onSubmit() {
-    setError(null);
+    setToastMessage(null);
     setEmailError(null);
     setPasswordError(null);
 
@@ -61,8 +62,9 @@ export default function LoginScreen() {
     try {
       await signIn(email.trim(), password);
       router.replace("/categories");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+    } catch {
+      setToastMessage(null);
+      setTimeout(() => setToastMessage("Invalid Email or Password"), 0);
       setLoading(false);
     }
   }
@@ -70,6 +72,14 @@ export default function LoginScreen() {
   return (
     <>
       {loading && <ActionLoader message="Signing in..." />}
+      <Toast
+        visible={Boolean(toastMessage)}
+        message={toastMessage ?? ""}
+        tone="error"
+        preserveCase
+        onHide={() => setToastMessage(null)}
+        durationMs={3500}
+      />
       <KeyboardAvoidingView
         style={styles.root}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -131,7 +141,6 @@ export default function LoginScreen() {
                   onChangeText={(v) => {
                     setPassword(v);
                     if (passwordError) setPasswordError(null);
-                    if (error) setError(null);
                   }}
                   secureTextEntry={!showPassword}
                   autoComplete="password"
@@ -157,12 +166,6 @@ export default function LoginScreen() {
                 <Text style={styles.fieldError}>{passwordError}</Text>
               )}
             </View>
-
-            {error && (
-              <View style={styles.errorBox}>
-                <Text style={styles.fieldError}>{error}</Text>
-              </View>
-            )}
 
             <Pressable
               style={[styles.submit, loading && styles.disabled]}
@@ -278,13 +281,6 @@ const styles = StyleSheet.create({
     color: colors.danger,
     fontSize: 13,
     fontWeight: "500",
-  },
-  errorBox: {
-    marginTop: 12,
-    backgroundColor: "rgba(180,35,24,0.1)",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
   },
   submit: {
     marginTop: 20,
