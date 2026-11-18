@@ -8,6 +8,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { formatTopMessage } from "@/components/Toast";
 import { colors, shadow } from "@/constants/theme";
 import { useApp } from "@/providers/AppProvider";
 
@@ -106,7 +107,9 @@ export function WelcomeBanner() {
     >
       <GestureDetector gesture={pan}>
         <Animated.View style={[styles.toast, shadow, animatedStyle]}>
-          <Text style={styles.text}>Welcome back, {welcomeName}!</Text>
+          <Text style={styles.text}>
+            {formatTopMessage(`Welcome back, ${welcomeName}!`)}
+          </Text>
         </Animated.View>
       </GestureDetector>
     </View>
