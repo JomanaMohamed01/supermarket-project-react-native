@@ -1,7 +1,7 @@
 import { Redirect, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { ChevronDown, ChevronUp } from "lucide-react-native";
+import { ChevronDown } from "lucide-react-native";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -266,9 +266,7 @@ const styles = StyleSheet.create({
     height: 28,
     alignItems: "center",
     justifyContent: "center",
-  },
-  arrowUp: {
-    position: "absolute",
+    overflow: "visible",
   },
   date: { fontSize: 13, color: colors.inkSoft },
   total: {
@@ -328,12 +326,8 @@ function OrderAccordion({ order }: { order: OrderCard }) {
     overflow: "hidden",
   }));
 
-  const downStyle = useAnimatedStyle(() => ({
-    opacity: 1 - progress.value,
-  }));
-
-  const upStyle = useAnimatedStyle(() => ({
-    opacity: progress.value,
+  const arrowStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${progress.value * 180}deg` }],
   }));
 
   return (
@@ -352,11 +346,8 @@ function OrderAccordion({ order }: { order: OrderCard }) {
             <Text style={styles.statusText}>{order.status}</Text>
           </View>
           <View style={styles.arrowSlot}>
-            <Animated.View style={downStyle}>
+            <Animated.View style={arrowStyle}>
               <ChevronDown size={22} color={colors.ink} />
-            </Animated.View>
-            <Animated.View style={[styles.arrowUp, upStyle]}>
-              <ChevronUp size={22} color={colors.ink} />
             </Animated.View>
           </View>
         </View>
