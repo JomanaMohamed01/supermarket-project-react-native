@@ -97,6 +97,7 @@ export function SiteHeader() {
           <View style={[styles.menu, { top: insets.top + 64 }, shadow]}>
             <MenuItem
               label="Shop"
+              divider
               onPress={() => {
                 setMenuOpen(false);
                 router.push("/categories");
@@ -104,6 +105,7 @@ export function SiteHeader() {
             />
             <MenuItem
               label="My cart"
+              divider
               badge={cartCount > 0 ? cartCount : undefined}
               onPress={() => {
                 setMenuOpen(false);
@@ -112,6 +114,7 @@ export function SiteHeader() {
             />
             <MenuItem
               label="My orders"
+              divider
               onPress={() => {
                 setMenuOpen(false);
                 router.push("/orders");
@@ -119,6 +122,7 @@ export function SiteHeader() {
             />
             <MenuItem
               label="My profile"
+              divider
               onPress={() => {
                 setMenuOpen(false);
                 router.push("/account");
@@ -163,20 +167,25 @@ function MenuItem({
   label,
   onPress,
   badge,
+  divider = false,
 }: {
   label: string;
   onPress: () => void;
   badge?: number;
+  divider?: boolean;
 }) {
   return (
-    <Pressable style={styles.menuItem} onPress={onPress}>
-      <Text style={styles.menuText}>{label}</Text>
-      {badge !== undefined && (
-        <View style={styles.menuBadge}>
-          <Text style={styles.menuBadgeText}>{badge}</Text>
-        </View>
-      )}
-    </Pressable>
+    <View>
+      <Pressable style={styles.menuItem} onPress={onPress}>
+        <Text style={styles.menuText}>{label}</Text>
+        {badge !== undefined && (
+          <View style={styles.menuBadge}>
+            <Text style={styles.menuBadgeText}>{badge}</Text>
+          </View>
+        )}
+      </Pressable>
+      {divider ? <View style={styles.menuDivider} /> : null}
+    </View>
   );
 }
 
@@ -268,16 +277,22 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.line,
-    padding: 8,
-    gap: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    gap: 2,
   },
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 14,
     borderRadius: 12,
+  },
+  menuDivider: {
+    height: 1,
+    marginHorizontal: 10,
+    backgroundColor: "rgba(64, 145, 108, 0.22)",
   },
   menuText: {
     fontSize: 14,
