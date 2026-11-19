@@ -295,8 +295,10 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(64, 145, 108, 0.22)",
   },
   menuText: {
+    fontFamily: "NunitoSans_700Bold",
     fontSize: 14,
-    fontWeight: "600",
+    letterSpacing: 0.35,
+    lineHeight: 20,
     color: colors.ink,
   },
   menuBadge: {
