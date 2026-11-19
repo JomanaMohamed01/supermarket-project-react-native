@@ -103,7 +103,7 @@ export function SiteHeader() {
               }}
             />
             <MenuItem
-              label="Cart"
+              label="My cart"
               badge={cartCount > 0 ? cartCount : undefined}
               onPress={() => {
                 setMenuOpen(false);
